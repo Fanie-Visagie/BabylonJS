@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Sample Code - 02 First Scene</title>
+        <title>Sample Code - 03 First Model Import</title>
 
         <!-- Babylon.js -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>
@@ -67,12 +67,19 @@
         const createScene = () => {
             const scene = new BABYLON.Scene(engine);
 
-            const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 3, new BABYLON.Vector3(0, 0, 0));
+            const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 15, new BABYLON.Vector3(0, 0, 0));
             camera.attachControl(canvas, true);
 
             const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0));
 
-            const box = BABYLON.MeshBuilder.CreateBox("box", {});
+            BABYLON.SceneLoader.ImportMeshAsync(["detached_house","semi_house","ground"], "https://assets.babylonjs.com/meshes/", "both_houses_scene.babylon").then((result) => {
+                const house1 = result.meshes[1];
+                house1.position.x = 0;
+                const house2 = result.meshes[2];
+                house2.position.x = 0;
+                const house3 = result.meshes[2];
+                house2.position.x = 5;
+            });
 
             return scene;
         }

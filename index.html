@@ -10,6 +10,7 @@
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
     <script src="https://cdn.babylonjs.com/addons/babylonjs.addons.min.js"></script>
     <script src="https://cdn.babylonjs.com/meshopt_decoder.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -22,15 +23,15 @@
             overflow: hidden;
         }
         .top-pane {
-            text-align: center; /* Center the text */
-            background-color: white; /* Match background */
-            padding: 15px 0; /* Add padding */
+            text-align: center;
+            background-color: white;
+            padding: 15px 0;
         }
         .top-pane h1 {
-            color: #00049E; /* Set text color to blue */
-            font-size: 24px; /* Adjust font size */
-            font-weight: bold; /* Make it bold */
-            margin: 0; /* Remove default margins */
+            color: #00049E;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
         }
         .explorer-container {
             display: flex;
@@ -63,17 +64,18 @@
             flex-grow: 1;
             height: calc(100vh - 20vh - 60px);
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             position: relative;
             padding-bottom: 10px;
+            overflow: auto;
         }
         .file-display {
             width: 100%;
             height: 100%;
         }
         .bottom-pane {
-            width: 99%;
-            height: 16.25vh;
+            width: 100%;
+            height: 20vh;
             position: fixed;
             bottom: 0;
             overflow-y: auto;
@@ -86,6 +88,16 @@
             padding: 5px;
             font-size: 14px;
             border: 1px solid blue;
+        }
+        #pdfContainer {
+            width: 100%;
+            display: none;
+            overflow-y: auto;
+            background: white;
+        }
+        .pdf-page {
+            margin-bottom: 10px;
+            display: block;
         }
     </style>
 </head>
@@ -100,6 +112,7 @@
         </aside>
         <section class="main-pane">
             <canvas id="renderCanvas" class="file-display"></canvas>
+            <div id="pdfContainer"></div>
         </section>
     </div>
     <footer class="bottom-pane">
@@ -115,10 +128,10 @@
             scene = new BABYLON.Scene(engine);
 
             let camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
-            camera.wheelPrecision = 50;  // Reduced zoom sensitivity
-            camera.lowerRadiusLimit = 2; // Prevent zooming in too much
-            camera.upperRadiusLimit = 50; // Prevent zooming out too far
-            camera.useAutoRotationBehavior = true; // Enable smooth interaction
+            camera.wheelPrecision = 50;
+            camera.lowerRadiusLimit = 2;
+            camera.upperRadiusLimit = 50;
+            camera.useAutoRotationBehavior = false;
             camera.attachControl(canvas, true);
 
             let light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
@@ -163,7 +176,11 @@
                         }
                     } else {
                         const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${item.path}`;
-                        loadModel(rawUrl);
+                        if (item.name.endsWith('.pdf')) {
+                            displayPDF(rawUrl);
+                        } else {
+                            loadModel(rawUrl);
+                        }
                     }
                 });
 
@@ -180,18 +197,31 @@
         }
 
         function loadModel(url) {
-            logDebug('Loading model: ' + url);
+            logDebug(`Loading model: ${url}`);
+            document.getElementById("renderCanvas").style.display = "block";
+            document.getElementById("pdfContainer").style.display = "none";
+            BABYLON.SceneLoader.ImportMesh("", url.substring(0, url.lastIndexOf("/") + 1), url.substring(url.lastIndexOf("/") + 1), scene);
+        }
 
-            scene.meshes.forEach(mesh => {
-                if (mesh.name !== "__root__") mesh.dispose();
-            });
+        function displayPDF(url) {
+            logDebug(`Displaying PDF: ${url}`);
+            document.getElementById("renderCanvas").style.display = "none";
+            document.getElementById("pdfContainer").style.display = "block";
+            document.getElementById("pdfContainer").innerHTML = "";
 
-            BABYLON.SceneLoader.ImportMesh("", url, "", scene, function (meshes) { 
-                logDebug('Model Loaded Successfully');
-            }, function (progress) {
-                logDebug(`Loading Progress: ${progress.loaded}/${progress.total}`);
-            }, function (error) {
-                logDebug(`Error loading model: ${error.message}`);
+            pdfjsLib.getDocument(url).promise.then(pdf => {
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    pdf.getPage(pageNum).then(page => {
+                        let canvas = document.createElement("canvas");
+                        canvas.classList.add("pdf-page");
+                        document.getElementById("pdfContainer").appendChild(canvas);
+                        let viewport = page.getViewport({ scale: 1.5 });
+                        let context = canvas.getContext("2d");
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        page.render({ canvasContext: context, viewport });
+                    });
+                }
             });
         }
 

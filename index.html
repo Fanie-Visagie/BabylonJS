@@ -1,16 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="utf-8">
-  <title>Babylon.js Tutorials</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Delivery Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #D4E8D4;
+        }
+        .top-pane {
+            background-color: #C8DDF9;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border: 3px solid #00049E;
+        }
+        .explorer-container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            flex-grow: 1;
+        }
+        .folder-pane, .main-pane, .bottom-pane {
+            border: 3px solid #00049E;
+            border-style: inset;
+        }
+        .folder-pane {
+            background-color: #F9EBC8;
+            padding: 10px;
+            width: 20%;
+            height: calc(100vh - 20vh - 60px);
+            overflow-y: auto;
+        }
+        .main-pane {
+            background-color: #D4E8D4;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 20vh - 60px);
+        }
+        .file-display {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .bottom-pane {
+            background-color: #F9C8E8;
+            padding: 10px;
+            text-align: center;
+            width: 100%;
+            height: 20vh;
+            position: absolute;
+            bottom: 0;
+        }
+        .folder-tree ul {
+            list-style-type: none;
+            padding-left: 15px;
+        }
+        .folder-tree li {
+            cursor: pointer;
+            padding: 5px 0;
+        }
+    </style>
 </head>
 <body>
-  <h1>Babylon.js Tutorials</h1>
-  <ul>
-    <li><a href="01 Very First Scene/">01 Very First Scene</a></li>
-    <li><a href="02 First Scene/">02 First Scene</a></li>
-    <li><a href="03 Model Import/">03 Model Import</a></li>
-  </ul>
+    <header class="top-pane">
+        <h1>Customer Delivery Portal</h1>
+    </header>
+    <div class="explorer-container">
+        <aside class="folder-pane">
+            <h3>File Explorer</h3>
+            <ul id="folder-list" class="folder-tree"></ul>
+        </aside>
+        <section class="main-pane">
+            <h3>Model Viewer</h3>
+            <div class="file-display">
+                <canvas id="renderCanvas"></canvas>
+            </div>
+        </section>
+    </div>
+    <footer class="bottom-pane">
+        <h3>Downloads</h3>
+        <ul id="download-list" class="file-list"></ul>
+    </footer>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script>
+        async function fetchGitHubRepo(owner, repo, path = '') {
+            const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+            const response = await fetch(url);
+            return await response.json();
+        }
+        
+        async function buildFileExplorer(owner, repo, path = '', parentElement = document.getElementById('folder-list')) {
+            const items = await fetchGitHubRepo(owner, repo, path);
+            if (!Array.isArray(items)) return;
+            
+            items.forEach(item => {
+                if (!path && ['README.md', '_config.yml', 'index.html'].includes(item.name)) return;
+                
+                let listItem = document.createElement('li');
+                listItem.textContent = item.name;
+                
+                if (item.type === 'dir') {
+                    listItem.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (!listItem.hasChildNodes()) {
+                            let sublist = document.createElement('ul');
+                            listItem.appendChild(sublist);
+                            await buildFileExplorer(owner, repo, item.path, sublist);
+                        }
+                    });
+                } else if (item.type === 'file' && item.name === 'index.html') {
+                    listItem.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        loadModelViewer(item.download_url);
+                    });
+                }
+                
+                parentElement.appendChild(listItem);
+            });
+        }
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            buildFileExplorer('fanie-visagie', 'BabylonJS');
+        });
+        
+        function loadModelViewer(url) {
+            BABYLON.SceneLoader.Load("", url, engine, function (scene) {
+                engine.runRenderLoop(() => {
+                    scene.render();
+                });
+            });
+        }
+    </script>
 </body>
 </html>

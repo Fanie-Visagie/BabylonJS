@@ -579,6 +579,10 @@ async function displayPDF(pdfUrl) {
     const container = document.getElementById('pdfPages');
     container.innerHTML = ""; // Clear only the pages, NOT the controls
 
+    // ✅ Ensure the zoom controls are shown again
+    const pdfControls = document.getElementById('pdfControls');
+    pdfControls.style.display = 'flex';  // ✅ Force it to reappear
+
     try {
         const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
         const numPages = pdf.numPages;
@@ -608,6 +612,7 @@ async function displayPDF(pdfUrl) {
         console.error("Error displaying PDF:", error);
     }
 }
+
 
 function zoomPDF(factor, reset = false) {
     if (reset) {

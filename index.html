@@ -159,70 +159,62 @@ body {
 }
 
         /* Model Viewer Pane */
-        #renderCanvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
+/* --- Fix Render Canvas Overlapping --- */
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0; /* Ensures it does not overlap content */
+    border: none; /* Removes any unwanted borders */
+}
 
-        .file-display {
-            width: 90%;
-            height: 90%;
-            max-width: 100%;
-            max-height: 100%;
-            border: 5px solid #d3d3d3;
-            background-color: #f5f5f5;
-        }
 /* --- Fixed Bottom Pane (Footer Panel) --- */
 .bottom-pane {
     width: 100%;
-    height: 17.5vh;
+    height: 17.5vh; /* Keep height fixed */
     position: fixed;
     bottom: 0;
     left: 0;
-    right: 0;
-    overflow-y: auto;
     background: #f8f9fa;
     border-top: 4px solid #00049E;
     padding: 10px;
     box-shadow: inset 0px 2px 10px rgba(0, 0, 0, 0.3);
-    border-radius: 0; /* Ensure it's squared */
-    z-index: 9;
+    border-radius: 0; /* Ensure squared edges */
+    z-index: 99; /* Keeps it above other content */
+    display: flex;
+    flex-direction: column;
 }
 
-        .download-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.download-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Prevents content from breaking out */
+}
 
-        .download-table th {
-            background-color: #00049E;
-            color: white;
-            text-align: left;
-            padding: 8px;
-            font-size: 16px;
-        }
+.download-table th,
+.download-table td {
+    font-size: 14px; /* Set uniform font size */
+    height: 20px; /* Ensure all rows have the same height */
+    padding: 10px; /* Ensure spacing inside cells */
+    text-align: left; /* Keep text alignment consistent */
+    vertical-align: middle; /* Center text vertically */
+}
 
-        .download-table td {
-            padding: 10px;
-            font-size: 14px;
-        }
+.download-table tr:nth-child(odd) {
+    background-color: #e6e6e6; /* Light gray alternating rows */
+}
 
-        .download-table tr:nth-child(odd) {
-            background-color: #e6e6e6; /* Light gray for alternating rows */
-        }
-
-        .download-table tr:nth-child(even) {
-            background-color: #ffffff; /* White for alternating rows */
-        }
-
+.download-table tr:nth-child(even) {
+    background-color: #ffffff; /* White alternating rows */
+}
         .download-table a {
             color: #00049E;
             text-decoration: none;
             font-weight: bold;
+            table-layout: fixed; /* Ensures no content spills over */
         }
 
         .download-table a:hover {
@@ -230,16 +222,19 @@ body {
             color: #ff6600; /* Highlight color on hover */
         }
 
+        /* Ensure the download list stays within the bordered box */
         #downloads-pane {
-            height: 150px; /* ⬆ Increased height */
-            max-height: 100%; /* Prevents overflow beyond the pane */
-            background: #fff;
-            padding: 10px; /* More padding for better spacing */
-            font-size: 16px; /* Slightly larger text for readability */
-            border: 2px solid #00049E; /* Bold blue border */
-            border-radius: 8px; /* Soft rounded corners */
-            box-shadow: inset 0px 2px 8px rgba(0, 0, 0, 0.2); /* Beveled effect */
-        }
+    width: 99%;
+    height: calc(100% - 30px); /* Adjust height dynamically */
+    overflow-y: auto; /* Allows scrolling inside */
+    overflow-x: hidden;
+    padding: 10px;
+    border: 3px solid #00049E; /* Keeps blue border intact */
+    box-sizing: border-box;
+    background: #fff; /* Keep clean white background */
+    border-radius: 10px; /* Optional rounded corners */
+}
+
 
         .loading {
             position: absolute;
@@ -336,8 +331,22 @@ body {
     align-items: center;
     width: 100%;
 }
+#imageContainer {
+    display: none;  /* Hidden by default */
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
 
-
+#displayedImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;  /* ✅ Ensures full stretching while maintaining aspect ratio */
+}
     </style>
 </head>
 
@@ -362,7 +371,9 @@ body {
                 </div>
                 <div id="pdfPages"></div> <!-- Holds all pages, keeping buttons separate -->
             </div>
-            
+            <div id="imageContainer">
+                <img id="displayedImage" src="" alt="Loaded Image">
+            </div>            
         </section>
     </div>
     <footer class="bottom-pane">
@@ -536,31 +547,29 @@ body {
 
 
 
-/*********************************************** PDF EXPLORER - Functions ***********************************************/
+/*********************************************** PDF and Image EXPLORER - Functions ***********************************************/
+function loadFile(url, filename) {
+    const isPDF = filename.toLowerCase().endsWith('.pdf');
+    const isImage = /\.(jpeg|jpg|png|gif)$/i.test(filename); // ✅ Checks if file is an image
+    const renderCanvas = document.getElementById('renderCanvas');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const imageContainer = document.getElementById('imageContainer');
 
-        function loadFile(url, filename) {
-            const isPDF = filename.toLowerCase().endsWith('.pdf');
-            const renderCanvas = document.getElementById('renderCanvas');
-            const pdfContainer = document.getElementById('pdfContainer');
+    // Hide all displays first
+    renderCanvas.style.display = 'none';
+    pdfContainer.style.display = 'none';
+    imageContainer.style.display = 'none';
 
-            // Hide both views first
-            renderCanvas.style.display = 'none';
-            pdfContainer.style.display = 'none';
-
-            if (isPDF) {
-                pdfContainer.style.display = 'block'; // Show PDF container
-                displayPDF(url);
-                
-            } else {
-                renderCanvas.style.display = 'block'; // Show Babylon.js
-                loadModel(url);
-
-                // Ensure Babylon.js resizes properly
-                setTimeout(() => {
-                    engine.resize();
-                }, 100);
-            }
-        }
+    if (isPDF) {
+        pdfContainer.style.display = 'block';
+        displayPDF(url);
+    } else if (isImage) {
+        displayImage(url);
+    } else {
+        renderCanvas.style.display = 'block';
+        loadModel(url);
+    }
+}
 
         let pdfZoomFactor = 1; // Default zoom level
 let loadedPdfUrl = ""; // Store current PDF
@@ -614,6 +623,22 @@ function zoomPDF(factor, reset = false) {
 }
 
 
+function displayImage(url) {
+    const imageElement = document.getElementById('displayedImage');
+    const imageContainer = document.getElementById('imageContainer');
+    const renderCanvas = document.getElementById('renderCanvas');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const pdfControls = document.getElementById('pdfControls');
+
+    // ✅ Hide other viewers
+    renderCanvas.style.display = 'none';  // Hide Babylon.js canvas
+    pdfContainer.style.display = 'none';  // Hide PDF viewer
+    pdfControls.style.display = 'none';   // ✅ Hide PDF zoom buttons
+
+    // ✅ Show image container
+    imageElement.src = url;
+    imageContainer.style.display = 'block';
+}
 
 /*********************************************** Exception Log - Functions ***********************************************/
         function logDebug(message) {

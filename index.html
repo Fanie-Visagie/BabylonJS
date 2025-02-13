@@ -7,35 +7,343 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://cdn.babylonjs.com/addons/babylonjs.addons.min.js"></script>
+    <script src="https://cdn.babylonjs.com/meshopt_decoder.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            overflow: hidden;
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    overflow: hidden;
+}
+
+.top-pane {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    padding: 15px;
+    height: 80px;
+    width: 100%;
+    position: relative;
+}
+
+
+        .logo {
+            height: 80px; /* Adjust size */
+            width: auto; /* Maintain aspect ratio */
+            position: absolute;
+            left: 20px; /* Moves logo slightly right */
+            top: 50%;
+            transform: translateY(-50%); /* Centers vertically */
         }
-        .top-pane { text-align: center; background: white; padding: 10px; border-bottom: 3px solid #00049E; }
-        .explorer-container { display: flex; width: 100%; flex: 1; height: 75%; overflow: hidden; }
-        .folder-pane { width: 20%; height: 100%; border-right: 3px solid #00049E; background: white; padding: 10px; overflow-y: auto; }
-        .folder-tree ul { padding-left: 15px; }
-        .folder-tree li { list-style: none; padding: 5px; cursor: pointer; font-size: 12px; }
-        .folder-tree li:hover { background: #f0f0f0; }
-        .main-pane { width: 80%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; background: white; }
-        #renderCanvas, #pdfContainer { width: 100%; height: 100%; display: none; }
-        .pdf-controls { position: fixed; top: 60px; right: 10px; z-index: 10; background: rgba(255, 255, 255, 0.8); padding: 10px; border-radius: 5px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); }
-        .pdf-controls button { padding: 5px 10px; margin: 5px; font-size: 14px; cursor: pointer; }
-        .bottom-pane { width: 100%; height: 25%; background: white; padding: 10px; overflow-y: auto; border-top: 3px solid #00049E; }
-        #debug-log { flex-grow: 1; overflow-y: auto; background: #fff; padding: 5px; font-size: 14px; border: 1px solid blue; max-height: 100%; }
-        #pdfPages { display: flex; flex-direction: column; align-items: center; }
-        #pdfPages canvas { border: 2px solid #ccc; margin: 10px 0; background: white; }
+
+        .top-pane {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    padding: 15px;
+    height: 80px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10; /* Ensures it stays above */
+    border-bottom: 4px solid #00049E;
+}       
+              
+        .title-container {
+            flex-grow: 1; /* Allows the title to center */
+            text-align: center; /* Center title */
+        }
+        
+/* --- Main Content Container --- */
+.explorer-container {
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    width: 100%;
+    position: fixed;
+    top: 80px; /* Below Top Pane */
+    bottom: 17.5vh; /* Above Bottom Pane */
+    overflow: hidden;
+}
+
+
+
+        .folder-pane, .main-pane, .bottom-pane {
+            background-color: white;
+            border: 3px solid #00049E;
+            padding: 10px;
+        }
+ 
+/* --- Fixed Folder Pane (Left Panel) --- */
+.folder-pane {
+    width: 25%;
+    min-width: 250px;
+    max-width: 350px;
+    height: 100%;
+    background: white;
+    border-right: 4px solid #00049E;
+    padding: 25px;
+    overflow-y: auto;
+    box-shadow: 2px 0px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.folder-tree {
+    padding-left: 5px; /* Reduce padding */
+    margin-left: -5%; /* Shift the entire tree left */
+}
+        /* Improve file/folder spacing */
+        .folder-tree ul {
+            padding-left: 5px;
+                /* ✅ Increase spacing between items */
+    margin-bottom: 6px;  /* Adjust this value for more spacing */
+    padding: 4px 5px;  /* Adds vertical padding */
+        }
+
+        .folder-tree li {
+    list-style: none;
+    padding-left: 5px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 5px;
+    transition: background 0.2s ease-in-out;
+
+    /* ✅ Ensures wrapping but only when necessary */
+    white-space: wrap;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+
+    /* ✅ Dynamically adjust width so text uses full space */
+    display: block;
+    max-width: calc(100% - 15px);
+
+    /* ✅ Increase spacing between items */
+    margin-bottom: 6px;  /* Adjust this value for more spacing */
+    padding: 4px 0;  /* Adds vertical padding */
+}
+
+        .folder-tree li::before {
+            content: "📂 "; /* Folder icon for directories */
+            font-size: 14px;
+        }
+
+        .folder-tree li.file::before {
+            content: "📄 "; /* File icon for files */
+            font-size: 14px;
+        }
+
+/* --- Fixed Main Pane (Center Panel) --- */
+.main-pane {
+    flex-grow: 1;
+    height: 100%;
+    background: #1e1e2f;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+        /* Model Viewer Pane */
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .file-display {
+            width: 90%;
+            height: 90%;
+            max-width: 100%;
+            max-height: 100%;
+            border: 5px solid #d3d3d3;
+            background-color: #f5f5f5;
+        }
+/* --- Fixed Bottom Pane (Footer Panel) --- */
+.bottom-pane {
+    width: 100%;
+    height: 17.5vh;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    background: #f8f9fa;
+    border-top: 4px solid #00049E;
+    padding: 10px;
+    box-shadow: inset 0px 2px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 0; /* Ensure it's squared */
+    z-index: 9;
+}
+
+        .download-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .download-table th {
+            background-color: #00049E;
+            color: white;
+            text-align: left;
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        .download-table td {
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .download-table tr:nth-child(odd) {
+            background-color: #e6e6e6; /* Light gray for alternating rows */
+        }
+
+        .download-table tr:nth-child(even) {
+            background-color: #ffffff; /* White for alternating rows */
+        }
+
+        .download-table a {
+            color: #00049E;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .download-table a:hover {
+            text-decoration: underline;
+            color: #ff6600; /* Highlight color on hover */
+        }
+
+        #downloads-pane {
+            height: 150px; /* ⬆ Increased height */
+            max-height: 100%; /* Prevents overflow beyond the pane */
+            background: #fff;
+            padding: 10px; /* More padding for better spacing */
+            font-size: 16px; /* Slightly larger text for readability */
+            border: 2px solid #00049E; /* Bold blue border */
+            border-radius: 8px; /* Soft rounded corners */
+            box-shadow: inset 0px 2px 8px rgba(0, 0, 0, 0.2); /* Beveled effect */
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        #pdfViewer {
+            width: 90%;
+            height: 90%;
+            border: 5px solid #d3d3d3;
+            background-color: #f5f5f5;
+            display: none;
+        }
+        
+/* Ensure the PDF container is properly positioned */
+#pdfContainer {
+    display: none;
+    width: 100%;
+    height: calc(100% - 5vh); /* Prevents overlap with bottom pane */
+    overflow-y: auto; /* Enable scrolling */
+    overflow-x: hidden;
+    background-color: #ffffff;
+    position: absolute;
+    top: 30px; /* Moves PDF viewer slightly lower */
+    left: 0;
+    right: 0;
+    padding-bottom: 10px; /* Small buffer for spacing */
+    box-sizing: border-box; /* Ensures padding does not cause overflow */
+}
+
+
+
+/* PDF page styling to avoid getting cut off */
+.pdf-page {
+    display: block;
+    margin: 10px auto; /* Centers pages */
+    border: 2px solid #d3d3d3;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    background: white;
+    padding: 10px;
+    max-width: 95%; /* Prevents it from overflowing */
+    width: auto;
+    height: auto;
+}
+
+/* Ensure the PDF canvas fits inside main-pane */
+#pdfCanvas {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+}
+/* Ensure PDF controls are always visible */
+#pdfControls {
+    position: sticky; /* Makes it stay inside the PDF container */
+    top: 0; /* Keeps it at the top of the PDF container */
+    left: 0;
+    width: 100%; /* Ensures it spans the full width */
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.9); /* Slight transparency */
+    padding: 8px;
+    display: flex;
+    justify-content: center; /* Center the buttons */
+    gap: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+
+#pdfControls button {
+    background: #00049E;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+#pdfControls button:hover {
+    background: #ff6600;
+}
+
+/* Ensure PDF pages are inside this div */
+#pdfPages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+
     </style>
 </head>
+
 <body>
     <header class="top-pane">
+        <img src="BV Logo.png" alt="BV Logo" class="logo">
         <h1>GBL Energy - Customer Delivery Portal</h1>
     </header>
     <div class="explorer-container">
@@ -44,120 +352,283 @@
             <ul id="folder-list" class="folder-tree"></ul>
         </aside>
         <section class="main-pane">
-            <canvas id="renderCanvas"></canvas>
+            <div class="loading" id="loading">Loading...</div>
+            <canvas id="renderCanvas" class="file-display"></canvas>
             <div id="pdfContainer">
-                <div class="pdf-controls">
-                    <button onclick="zoomIn()">Zoom In +</button>
-                    <button onclick="zoomOut()">Zoom Out -</button>
+                <div id="pdfControls">
+                    <button onclick="zoomPDF(1.2)">➕ Zoom In</button>
+                    <button onclick="zoomPDF(0.8)">➖ Zoom Out</button>
+                    <button onclick="zoomPDF(1, true)">🔄 Reset</button>
                 </div>
-                <div id="pdfPages"></div>
+                <div id="pdfPages"></div> <!-- Holds all pages, keeping buttons separate -->
             </div>
+            
         </section>
     </div>
     <footer class="bottom-pane">
-        <h3>Debug & Error Logs</h3>
-        <div id="debug-log"></div>
+        <h3>Download Files Here</h3>
+        <div id="downloads-pane"></div>
     </footer>
     <script>
-        let engine, scene;
-        let pdfScale = 1.5;
-        let currentPdfUrl = "";
-        let folderCache = {};  // Cache folder structure to avoid recursion
+
+      /*********************************************** Model Viewer - Functions ***********************************************/  
+      let engine, scene, camera;
+      let folderCache = {}; // Re-enable caching
 
         function initializeBabylon() {
             const canvas = document.getElementById("renderCanvas");
             engine = new BABYLON.Engine(canvas, true);
             scene = new BABYLON.Scene(engine);
 
-            let camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
-            camera.useAutoRotationBehavior = false;
+            // Set up an ArcRotateCamera (User can rotate around model)
+            camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 2, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
+            camera.wheelPrecision = 50;
+            camera.lowerRadiusLimit = 2;
+            camera.upperRadiusLimit = 50;
             camera.attachControl(canvas, true);
 
+            // Add a light source
             let light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
-            engine.runRenderLoop(() => scene.render());
+
+            // Render loop
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+
+            // Ensure canvas resizes with window
+            window.addEventListener("resize", () => {
+                engine.resize();
+            });
         }
 
+
         async function fetchGitHubRepo(owner, repo, path = '') {
-            const cacheKey = `${owner}/${repo}/${path}`;
-            if (folderCache[cacheKey]) return folderCache[cacheKey];  // Return cached data
+            if (folderCache[path]) return folderCache[path]; // ✅ Avoid redundant API calls
 
             const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`GitHub API Error: ${response.status} ${response.statusText}`);
-                const result = await response.json();
-                folderCache[cacheKey] = result; // Cache result
-                return result;
+                const data = await response.json();
+                folderCache[path] = data; // ✅ Store the fetched data in cache
+                return data;
             } catch (error) {
-                console.error(`Error fetching GitHub Repo: ${error.message}`);
+                logDebug(`Error fetching GitHub Repo: ${error.message}`);
                 return [];
             }
         }
 
-        async function buildFileExplorer(owner, repo, path = '', parentElement = document.getElementById('folder-list')) {
+
+        function loadModel(url) {
+            console.log("Loading model:", url);
+            document.getElementById('loading').style.display = 'block';
+
+            // Dispose of previous meshes before loading a new model
+            scene.meshes.forEach(mesh => mesh.dispose());
+
+            BABYLON.SceneLoader.ImportMesh("", url.substring(0, url.lastIndexOf("/") + 1), url.split("/").pop(), scene, (meshes) => {
+                console.log("Model Loaded Successfully");
+
+                // Auto-adjust camera to focus on model
+                scene.createDefaultCameraOrLight(true, true, true);
+                scene.activeCamera.alpha = Math.PI / 2; // Reset to default angle
+                scene.activeCamera.beta = Math.PI / 4;
+                scene.activeCamera.radius = 10;
+
+                document.getElementById('loading').style.display = 'none';
+
+                // Force resize to fit new model
+                engine.resize();
+            }, null, (error) => {
+                console.error("Error loading model:", error.message);
+            });
+        }
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+                    initializeBabylon();
+                    buildFileExplorer('fanie-visagie', 'BabylonJS');
+                });
+       
+/*********************************************** FILE EXPLORER - Functions ***********************************************/
+        async function buildFileExplorer(owner, repo, path = '', parentElement = document.getElementById('folder-list'), isRoot = true) {
             const items = await fetchGitHubRepo(owner, repo, path);
             if (!Array.isArray(items)) return;
 
-            parentElement.innerHTML = '';
+            let fileList = [];
 
             items.forEach(item => {
                 let listItem = document.createElement('li');
-                listItem.innerHTML = item.type === 'dir' ? `<i class="fas fa-folder"></i> ${item.name}` : `<i class="fas fa-file"></i> ${item.name}`;
 
-                listItem.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${item.path}`;
+                if (item.type === 'dir') {
+                    // ✅ Folder - add class "folder"
+                    listItem.textContent = item.name;
+                    listItem.classList.add('folder'); // Apply correct class
 
-                    if (item.type === 'dir' && !listItem.dataset.loaded) {
-                        let sublist = document.createElement('ul');
-                        listItem.appendChild(sublist);
-                        listItem.dataset.loaded = true; // Prevent duplicate loads
-                        await buildFileExplorer(owner, repo, item.path, sublist);
-                    } else if (item.name.endsWith('.pdf')) {
-                        currentPdfUrl = rawUrl;
-                        displayPDF(rawUrl);
-                    } else {
-                        loadModel(rawUrl);
-                    }
-                });
+                    let sublist = document.createElement('ul');
+                    sublist.style.display = 'none';
+                    listItem.appendChild(sublist);
 
-                parentElement.appendChild(listItem);
-            });
-        }
+                    listItem.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (sublist.childNodes.length === 0) {
+                            await buildFileExplorer(owner, repo, item.path, sublist, false);
+                            sublist.style.display = 'block';
+                        } else {
+                            sublist.style.display = sublist.style.display === 'none' ? 'block' : 'none';
+                        }
+                    });
 
-        function loadModel(url) {
-            document.getElementById("renderCanvas").style.display = "block";
-            document.getElementById("pdfContainer").style.display = "none";
-            BABYLON.SceneLoader.ImportMesh("", url.substring(0, url.lastIndexOf("/") + 1), url.substring(url.lastIndexOf("/") + 1), scene);
-        }
+                    parentElement.appendChild(listItem);
+                } else if (!isRoot) {
+                    // ✅ File - add class "file" and remove extension
+                    let cleanFileName = item.name.replace(/\.[^/.]+$/, "");
+                    listItem.textContent = cleanFileName;
+                    listItem.classList.add('file'); // Apply correct class
 
-        function displayPDF(url) {
-            document.getElementById("renderCanvas").style.display = "none";
-            document.getElementById("pdfContainer").style.display = "block";
-            document.getElementById("pdfPages").innerHTML = '';
+                    fileList.push({ name: item.name, url: `https://raw.githubusercontent.com/${owner}/${repo}/main/${item.path}` });
 
-            pdfjsLib.getDocument(url).promise.then(pdf => {
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                    pdf.getPage(pageNum).then(page => renderPage(page));
+                    listItem.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${item.path}`;
+                        loadFile(rawUrl, item.name);
+                    });
+
+                    parentElement.appendChild(listItem);
                 }
             });
+
+            if (fileList.length > 0) {
+                updateDownloadBox(fileList);
+            }
         }
 
-        function renderPage(page) {
-            let viewport = page.getViewport({ scale: pdfScale });
-            let canvas = document.createElement("canvas");
-            let context = canvas.getContext("2d");
+
+        function updateDownloadBox(files) {
+            const downloadBox = document.getElementById('downloads-pane');
+            downloadBox.innerHTML = ''; // Clear previous content
+
+            // Create table for file downloads
+            let table = document.createElement('table');
+            table.classList.add('download-table');
+
+            // Remove the table header
+            let tbody = document.createElement('tbody');
+
+            files.forEach(file => {
+                let row = document.createElement('tr');
+                let cell = document.createElement('td');
+
+                let fileLink = document.createElement('a');
+                fileLink.href = file.url;
+                fileLink.textContent = file.name;
+                fileLink.setAttribute('download', file.name);
+                fileLink.target = '_blank';
+
+                cell.appendChild(fileLink);
+                row.appendChild(cell);
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            downloadBox.appendChild(table);
+        }
+
+
+
+/*********************************************** PDF EXPLORER - Functions ***********************************************/
+
+        function loadFile(url, filename) {
+            const isPDF = filename.toLowerCase().endsWith('.pdf');
+            const renderCanvas = document.getElementById('renderCanvas');
+            const pdfContainer = document.getElementById('pdfContainer');
+
+            // Hide both views first
+            renderCanvas.style.display = 'none';
+            pdfContainer.style.display = 'none';
+
+            if (isPDF) {
+                pdfContainer.style.display = 'block'; // Show PDF container
+                displayPDF(url);
+                
+            } else {
+                renderCanvas.style.display = 'block'; // Show Babylon.js
+                loadModel(url);
+
+                // Ensure Babylon.js resizes properly
+                setTimeout(() => {
+                    engine.resize();
+                }, 100);
+            }
+        }
+
+        let pdfZoomFactor = 1; // Default zoom level
+let loadedPdfUrl = ""; // Store current PDF
+
+async function displayPDF(pdfUrl) {
+    loadedPdfUrl = pdfUrl; // Save URL for reloading
+    const container = document.getElementById('pdfPages');
+    container.innerHTML = ""; // Clear only the pages, NOT the controls
+
+    try {
+        const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+        const numPages = pdf.numPages;
+
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: pdfZoomFactor });
+
+            // Create a new canvas for each page
+            const canvas = document.createElement('canvas');
+            canvas.classList.add("pdf-page");
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size based on zoom
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            document.getElementById("pdfPages").appendChild(canvas);
-            page.render({ canvasContext: context, viewport });
+
+            // Render the PDF page onto the canvas
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+            container.appendChild(canvas);
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            initializeBabylon();
-            buildFileExplorer('fanie-visagie', 'BabylonJS');
-        });
+        document.getElementById('pdfContainer').style.display = 'block'; // Show PDF container
+
+    } catch (error) {
+        console.error("Error displaying PDF:", error);
+    }
+}
+
+function zoomPDF(factor, reset = false) {
+    if (reset) {
+        pdfZoomFactor = 1; // Reset to default zoom
+    } else {
+        pdfZoomFactor *= factor; // Increase or decrease zoom
+    }
+
+    // Reload the currently displayed PDF with the updated zoom
+    if (loadedPdfUrl) {
+        displayPDF(loadedPdfUrl);
+    }
+}
+
+
+
+/*********************************************** Exception Log - Functions ***********************************************/
+        function logDebug(message) {
+          //  const debugLog = document.getElementById('downloads-pane');
+          //  const logEntry = document.createElement('div');
+          //  logEntry.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+          //  debugLog.appendChild(logEntry);
+          //  if (debugLog.childNodes.length > 50) {
+          //      debugLog.removeChild(debugLog.firstChild);
+          //  }
+          //  debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+
+
     </script>
-    
 </body>
 </html>
